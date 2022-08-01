@@ -4,29 +4,35 @@ import android.provider.Settings.Global.getString
 import java.math.BigDecimal
 import java.util.*
 
-class Transaction (
+data class Transaction (
     val from: User,
     val to: User,
     var amount: BigDecimal,
-    val description: String,
-    val date: Date,
+    val description: String = "",
+    val date: Date = Date(),
 ) {
+    init {
+        require(from != to) {
+            "participants must be different"
+        }
+    }
+
     override fun toString(): String {
         return "$from ${if (amount.signum() >= 0) "pays" else "owes"} \$$amount to $to"
     }
 
-    operator fun plus(other: Transaction) {
-        if (from !in other || to !in other) {
-            throw IllegalArgumentException("participants must be equal")
+    operator fun contains(user: User): Boolean =
+        user == from || user == to
+
+    operator fun plus(other: Transaction): Transaction {
+        require(from in other && to in other) {
+            "participants must be present in both transactions"
         }
-        amount += if (from == other.from) other.amount else other.amount.negate()
+        return this.copy().add(
+            if (from == other.from) other.amount else other.amount.negate()
+        )
     }
 
-    operator fun contains(user: User): Boolean {
-        return user == from || user == to
-    }
-
-    fun add(amount: BigDecimal) {
-        this.amount += amount
-    }
+    fun add(amount: BigDecimal): Transaction =
+        this.apply { this.amount += amount }
 }
